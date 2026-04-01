@@ -1,0 +1,16 @@
+[project]
+name = "post-trade-execution-monitor"
+version = "0.1.0"
+description = "Reproducible quantitative research system"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+    "pandas>=2.1",
+]
+
+[project.scripts]
+post_trade_execution_monitor = "post_trade.cli:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

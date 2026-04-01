@@ -1,0 +1,2 @@
+[console_scripts]
+post_trade_execution_monitor = post_trade.cli:main
