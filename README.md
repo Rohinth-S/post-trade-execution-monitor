@@ -77,3 +77,11 @@ curl --fail 'http://127.0.0.1:8000/v1/report?slippage_bps=40&latency_ms=1000'
 The synthetic ledger contains six orders. At the last captured event it shows two fills and one each of partial, failed, missing and overfilled. Attributed execution P&L is −$36.30, including $10.80 in gas and $1.20 in fees.
 
 ![Synthetic reconciliation state counts and cost attribution](docs/demo-results.png)
+
+## Commit dates
+
+Both Git date fields on the 40 commits in the November 2026 portfolio update
+use retrospectively assigned milestones from 2026-04-01 through 2026-05-31,
+the project period listed in the résumé. Each commit records its assigned date
+in the Project-Milestone trailer and its original committer timestamp in
+the Original-Commit-Date trailer. Use git log --format=fuller to inspect the dates.
