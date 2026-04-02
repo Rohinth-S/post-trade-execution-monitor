@@ -5,6 +5,8 @@ from datetime import datetime
 import json
 from pathlib import Path
 
+from . import __version__
+
 from .events import AlertLimits, ExecutionBatch
 from .execution import build_execution_report
 from .fixtures import demo_batch
@@ -22,6 +24,7 @@ def main() -> None:
     parser.add_argument("--slippage-bps", type=float, default=40)
     parser.add_argument("--latency-ms", type=float, default=1_000)
     parser.add_argument("--missing-after-ms", type=float, default=5_000)
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     args = parser.parse_args()
 
     try:
