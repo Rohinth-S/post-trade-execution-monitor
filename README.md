@@ -13,6 +13,9 @@ flowchart LR
  A --> N[Alert sink/dashboard]
 ```
 
+## Structural overview
+`src/post_trade/monitor.py` contains immutable fill metrics, reconciliation, anomaly policy, and attribution; `cli.py` demonstrates an incident; `tests/` covers latency and empty summaries.
+
 ## Workflow
 1. Ingest quote and fill records with event timestamps.
 2. Reconcile by order ID and venue.
