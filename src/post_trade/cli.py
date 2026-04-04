@@ -5,6 +5,8 @@ from datetime import datetime
 import json
 from pathlib import Path
 
+from .artifacts import write_text_atomic
+
 from . import __version__
 
 from .events import AlertLimits, ExecutionBatch
@@ -42,8 +44,7 @@ def main() -> None:
         report = build_execution_report(batch, as_of=args.as_of, limits=limits)
         payload = json.dumps(report, indent=2, allow_nan=False) + "\n"
         if args.output:
-            args.output.parent.mkdir(parents=True, exist_ok=True)
-            args.output.write_text(payload, encoding="utf-8")
+            write_text_atomic(args.output, payload)
     except (OSError, ValueError) as exc:
         parser.error(str(exc))
     print(payload, end="")
