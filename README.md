@@ -33,5 +33,11 @@ python -m post_trade.cli
 pytest -q
 ```
 
+## Live adapter boundary
+The monitor intentionally accepts normalized `Fill` records rather than owning a venue connector. This keeps reconciliation deterministic; production adapters can map RPC receipts, exchange fills, or internal OMS events into the same record.
+
+### Credential-dependent blockers
+Live monitoring requires authenticated venue/OMS event streams and durable storage. No network call occurs in the default CLI or tests.
+
 ## Limitations
 This repository provides the monitoring core; production adapters must add durable storage, idempotency, authentication, and venue-specific reconciliation rules.
