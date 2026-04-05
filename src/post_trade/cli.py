@@ -8,6 +8,7 @@ from pathlib import Path
 from .artifacts import write_text_atomic
 
 from . import __version__
+from .artifacts import require_distinct_paths
 
 from .events import AlertLimits, ExecutionBatch
 from .execution import build_execution_report
@@ -30,6 +31,11 @@ def main() -> None:
     args = parser.parse_args()
 
     try:
+        require_distinct_paths(
+            input_file=args.input,
+            ledger=args.db,
+            report=args.output,
+        )
         batch = ExecutionBatch.model_validate_json(args.input.read_bytes()) if args.input else None
         if args.seed_demo or (args.db is None and batch is None):
             batch = demo_batch()
