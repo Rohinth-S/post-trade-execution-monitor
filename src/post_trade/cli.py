@@ -48,6 +48,7 @@ def main() -> None:
             slippage_bps=args.slippage_bps, latency_ms=args.latency_ms, missing_after_ms=args.missing_after_ms,
         )
         report = build_execution_report(batch, as_of=args.as_of, limits=limits)
+        report["producer"] = {"name": "post-trade-execution-monitor", "version": __version__, "format_version": 1}
         payload = json.dumps(report, indent=2, allow_nan=False) + "\n"
         if args.output:
             write_text_atomic(args.output, payload)
