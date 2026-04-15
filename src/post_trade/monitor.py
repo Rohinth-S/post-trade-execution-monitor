@@ -47,14 +47,15 @@ def reconcile_orders(
     """
     if quantity_tolerance < 0:
         raise ValueError("quantity_tolerance cannot be negative")
-    by_order: dict[str, list[Fill]] = {}
+    by_order: dict[tuple[str, str], list[Fill]] = {}
     for fill in fills:
-        by_order.setdefault(fill.order_id, []).append(fill)
+        by_order.setdefault((fill.venue, fill.order_id), []).append(fill)
     rows: list[dict] = []
-    seen: set[str] = set()
+    seen: set[tuple[str, str]] = set()
     for order in expected:
-        matches = by_order.get(order.order_id, [])
-        seen.add(order.order_id)
+        key = (order.venue, order.order_id)
+        matches = by_order.get(key, [])
+        seen.add(key)
         if not matches:
             state = ExecutionState.MISSING
             filled_qty = 0.0
@@ -82,7 +83,7 @@ def reconcile_orders(
                      "state": state.value, "duplicate_count": len(matches),
                      "slippage_bps": float(slippage), "latency_ms": float(latency), "gas_usd": float(gas)})
     for fill in fills:
-        if fill.order_id not in seen:
+        if (fill.venue, fill.order_id) not in seen:
             rows.append({"order_id": fill.order_id, "venue": fill.venue,
                          "expected_quantity": 0.0, "filled_quantity": fill.quantity,
                          "state": ExecutionState.ORPHAN.value, "duplicate_count": 1,
@@ -101,7 +102,7 @@ class ReconciliationStateMachine:
     def ingest(self, fill: Fill) -> dict:
         self._fills.append(fill)
         rows = reconcile_orders(self.expected, self._fills)
-        return next(row for row in rows if row["order_id"] == fill.order_id)
+        return next(row for row in rows if (row["venue"], row["order_id"]) == (fill.venue, fill.order_id))
 
     def snapshot(self) -> list[dict]:
         return reconcile_orders(self.expected, self._fills)
