@@ -3,6 +3,7 @@ from datetime import datetime
 from enum import StrEnum
 import csv
 import json
+from math import isfinite
 from pathlib import Path
 import numpy as np
 
@@ -24,7 +25,7 @@ class ExpectedOrder:
     quantity: float
 
     def __post_init__(self) -> None:
-        if not self.order_id or not self.venue or self.quantity <= 0:
+        if not self.order_id or not self.venue or not isfinite(self.quantity) or self.quantity <= 0:
             raise ValueError("expected order id/venue are required and quantity must be positive")
 @dataclass
 class Fill:
@@ -45,8 +46,8 @@ def reconcile_orders(
     an ``orphan`` row for fills that have no corresponding order. Duplicate
     events remain visible instead of being silently deduplicated.
     """
-    if quantity_tolerance < 0:
-        raise ValueError("quantity_tolerance cannot be negative")
+    if not isfinite(quantity_tolerance) or quantity_tolerance < 0:
+        raise ValueError("quantity_tolerance must be finite and nonnegative")
     by_order: dict[tuple[str, str], list[Fill]] = {}
     for fill in fills:
         by_order.setdefault((fill.venue, fill.order_id), []).append(fill)
