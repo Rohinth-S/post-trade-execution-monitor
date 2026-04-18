@@ -8,6 +8,15 @@ import numpy as np
 
 from .events import AlertLimits, ExecutionBatch, Order, Receipt
 
+def _unique(records, field):
+    by_key = {}
+    for record in records:
+        key = (record.venue, getattr(record, field))
+        before = by_key.setdefault(key, record)
+        if before != record:
+            raise ValueError(f"conflicting {field} identity at {record.venue}/{key[1]}")
+    return list(by_key.values())
+
 
 def _order_row(order: Order, receipts: list[Receipt], cutoff: datetime, limits: AlertLimits) -> dict:
     successful = [receipt for receipt in receipts if receipt.status == "filled"]
@@ -69,12 +78,14 @@ def build_execution_report(
         [order.sent_at for order in batch.orders] + [fill.filled_at for fill in batch.fills],
         default=datetime(1970, 1, 1, tzinfo=UTC),
     )
-    orders = {(order.venue, order.order_id): order for order in batch.orders if order.sent_at <= cutoff}
+    orders = {
+        (order.venue, order.order_id): order
+        for order in _unique([item for item in batch.orders if item.sent_at <= cutoff], "order_id")
+    }
+    visible_fills = _unique([item for item in batch.fills if item.filled_at <= cutoff], "fill_id")
     receipts: dict[tuple[str, str], list[Receipt]] = defaultdict(list)
     exceptions = []
-    for fill in sorted(batch.fills, key=lambda item: (item.filled_at, item.venue, item.fill_id)):
-        if fill.filled_at > cutoff:
-            continue
+    for fill in sorted(visible_fills, key=lambda item: (item.filled_at, item.venue, item.fill_id)):
         key = (fill.venue, fill.order_id)
         state = "orphan" if key not in orders else "pre_order" if fill.filled_at < orders[key].sent_at else None
         if state:
