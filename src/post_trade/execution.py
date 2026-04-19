@@ -29,8 +29,13 @@ def _order_row(order: Order, receipts: list[Receipt], cutoff: datetime, limits: 
     gas = sum(receipt.gas_usd for receipt in receipts)
     fees = sum(receipt.fee_usd for receipt in receipts)
     age_ms = (cutoff - order.sent_at).total_seconds() * 1_000
+    def elapsed(receipt: Receipt) -> float:
+        return (receipt.filled_at - order.sent_at).total_seconds() * 1_000
+
+    response_ms = min(map(elapsed, receipts), default=None)
+    first_fill_ms = min(map(elapsed, successful), default=None)
     latency_ms = max(
-        ((receipt.filled_at - order.sent_at).total_seconds() * 1_000 for receipt in receipts),
+        map(elapsed, receipts),
         default=None,
     )
     if quantity and isclose(order.quantity, quantity, rel_tol=1e-9, abs_tol=1e-12):
@@ -47,6 +52,7 @@ def _order_row(order: Order, receipts: list[Receipt], cutoff: datetime, limits: 
         "venue": order.venue, "order_id": order.order_id, "route": order.route, "symbol": order.symbol,
         "side": order.side, "sent_at": order.sent_at.isoformat(), "state": status, "age_ms": age_ms,
         "expected_qty": order.quantity, "filled_qty": quantity, "quote_usd": order.quoted_price_usd,
+        "first_response_ms": response_ms, "first_fill_ms": first_fill_ms,
         "vwap_usd": vwap, "slippage_bps": -improvement / reference * 10_000 if reference else None,
         "latency_ms": latency_ms, "gas_usd": gas, "fee_usd": fees, "price_improvement_usd": improvement,
         "execution_pnl_usd": improvement - gas - fees, "signed_inventory": direction * quantity,
