@@ -34,6 +34,7 @@ def _order_row(order: Order, receipts: list[Receipt], cutoff: datetime, limits: 
 
     response_ms = min(map(elapsed, receipts), default=None)
     first_fill_ms = min(map(elapsed, successful), default=None)
+    last_fill = max((receipt.filled_at for receipt in successful), default=None)
     latency_ms = max(
         map(elapsed, receipts),
         default=None,
@@ -53,6 +54,8 @@ def _order_row(order: Order, receipts: list[Receipt], cutoff: datetime, limits: 
         "side": order.side, "sent_at": order.sent_at.isoformat(), "state": status, "age_ms": age_ms,
         "expected_qty": order.quantity, "filled_qty": quantity, "quote_usd": order.quoted_price_usd,
         "first_response_ms": response_ms, "first_fill_ms": first_fill_ms,
+        "last_fill_at": last_fill.isoformat() if last_fill else None,
+        "completion_ms": max(map(elapsed, successful)) if status in {"filled", "overfilled"} else None,
         "vwap_usd": vwap, "slippage_bps": -improvement / reference * 10_000 if reference else None,
         "latency_ms": latency_ms, "gas_usd": gas, "fee_usd": fees, "price_improvement_usd": improvement,
         "execution_pnl_usd": improvement - gas - fees, "signed_inventory": direction * quantity,
