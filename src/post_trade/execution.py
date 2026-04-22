@@ -57,6 +57,8 @@ def _order_row(order: Order, receipts: list[Receipt], cutoff: datetime, limits: 
         "last_fill_at": last_fill.isoformat() if last_fill else None,
         "completion_ms": max(map(elapsed, successful)) if status in {"filled", "overfilled"} else None,
         "vwap_usd": vwap, "slippage_bps": -improvement / reference * 10_000 if reference else None,
+        "expected_notional_usd": order.quantity * order.quoted_price_usd,
+        "executed_notional_usd": value, "filled_reference_notional_usd": reference,
         "latency_ms": latency_ms, "gas_usd": gas, "fee_usd": fees, "price_improvement_usd": improvement,
         "execution_pnl_usd": improvement - gas - fees, "signed_inventory": direction * quantity,
         "net_cash_usd": -direction * value - gas - fees, "failed_receipts": len(receipts) - len(successful),
@@ -74,6 +76,7 @@ def _statistics(orders: list[dict]) -> dict:
         if reference else None,
         **{name: sum(row[name] for row in orders) for name in (
             "gas_usd", "fee_usd", "price_improvement_usd", "execution_pnl_usd", "failed_receipts",
+            "expected_notional_usd", "executed_notional_usd", "filled_reference_notional_usd",
         )},
     }
 
