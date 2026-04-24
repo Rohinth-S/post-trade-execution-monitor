@@ -68,10 +68,14 @@ def _order_row(order: Order, receipts: list[Receipt], cutoff: datetime, limits: 
 def _statistics(orders: list[dict]) -> dict:
     latencies = [row["latency_ms"] for row in orders if row["latency_ms"] is not None]
     realized = [row for row in orders if row["slippage_bps"] is not None]
+    imposed = [row["slippage_bps"] for row in realized if row["slippage_bps"] > 0]
+    first_fill = [row["first_fill_ms"] for row in orders if row["first_fill_ms"] is not None]
     reference = sum(row["filled_qty"] * row["quote_usd"] for row in realized)
     return {
         "orders": len(orders), "states": dict(Counter(row["state"] for row in orders)),
         "p95_latency_ms": float(np.percentile(latencies, 95)) if latencies else None,
+        "p95_first_fill_ms": float(np.percentile(first_fill, 95)) if first_fill else None,
+        "p95_adverse_slippage_bps": float(np.percentile(imposed, 95)) if imposed else None,
         "weighted_slippage_bps": -sum(row["price_improvement_usd"] for row in realized) / reference * 10_000
         if reference else None,
         **{name: sum(row[name] for row in orders) for name in (
