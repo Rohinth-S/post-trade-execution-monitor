@@ -137,8 +137,13 @@ def build_execution_report(
         exposure["position_qty"] += row["signed_inventory"]
         exposure["net_cash_usd"] += row["net_cash_usd"]
     alerts.extend({**item, "type": item["state"], "severity": "critical"} for item in exceptions)
+    observed = [order.sent_at for order in orders.values()] + [fill.filled_at for fill in visible_fills]
     return {
         "as_of": cutoff.astimezone(UTC).isoformat(), "limits": limits.model_dump(), "summary": _statistics(rows),
+        "event_range": {
+            "first": min(observed).isoformat() if observed else None,
+            "last": max(observed).isoformat() if observed else None,
+        },
         "by_venue": {k: _statistics(v) for k, v in sorted(groups["venue"].items())},
         "by_route": {k: _statistics(v) for k, v in sorted(groups["route"].items())},
         "by_symbol": dict(sorted(inventory.items())), "orders": rows, "alerts": alerts,
