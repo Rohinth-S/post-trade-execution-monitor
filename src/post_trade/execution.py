@@ -7,6 +7,7 @@ from math import isclose
 import numpy as np
 
 from .events import AlertLimits, ExecutionBatch, Order, Receipt
+from .scope import ReportScope
 
 def _unique(records, field):
     by_key = {}
@@ -87,6 +88,7 @@ def _statistics(orders: list[dict]) -> dict:
 
 def build_execution_report(
     batch: ExecutionBatch, *, as_of: datetime | None = None, limits: AlertLimits = AlertLimits(),
+    scope: ReportScope = ReportScope(),
 ) -> dict:
     if as_of and (as_of.tzinfo is None or as_of.utcoffset() is None):
         raise ValueError("replay cutoff must include a timezone")
@@ -94,6 +96,7 @@ def build_execution_report(
         [order.sent_at for order in batch.orders] + [fill.filled_at for fill in batch.fills],
         default=datetime(1970, 1, 1, tzinfo=UTC),
     )
+    batch = scope.filter(batch)
     orders = {
         (order.venue, order.order_id): order
         for order in _unique([item for item in batch.orders if item.sent_at <= cutoff], "order_id")
@@ -140,6 +143,7 @@ def build_execution_report(
     observed = [order.sent_at for order in orders.values()] + [fill.filled_at for fill in visible_fills]
     return {
         "as_of": cutoff.astimezone(UTC).isoformat(), "limits": limits.model_dump(), "summary": _statistics(rows),
+        "scope": scope.model_dump(exclude_none=True),
         "event_range": {
             "first": min(observed).isoformat() if observed else None,
             "last": max(observed).isoformat() if observed else None,
