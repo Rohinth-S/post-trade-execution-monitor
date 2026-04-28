@@ -77,14 +77,15 @@ class LedgerStore:
 
     def snapshot(self, as_of: datetime | None = None) -> ExecutionBatch:
         cutoff = _event_time(as_of) if as_of else None
+        condition = "WHERE event_time <= ?" if cutoff is not None else ""
+        parameters = (cutoff,) if cutoff is not None else ()
         with closing(self._connect()) as connection, connection:
             connection.execute("BEGIN")
             groups = {}
             for table, model in (("orders", Order), ("fills", Receipt)):
                 rows = connection.execute(
-                    f"""SELECT payload FROM {table}
-                    WHERE (? IS NULL OR event_time <= ?) ORDER BY event_time, venue, record_id""",
-                    (cutoff, cutoff),
+                    f"SELECT payload FROM {table} {condition} ORDER BY event_time, venue, record_id",
+                    parameters,
                 )
                 groups[table] = [model.model_validate_json(row[0]) for row in rows]
         return ExecutionBatch.model_construct(**groups)
