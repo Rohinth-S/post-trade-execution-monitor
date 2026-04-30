@@ -42,8 +42,11 @@ class LedgerStore:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with closing(self._connect()) as connection:
+            version = connection.execute("PRAGMA user_version").fetchone()[0]
+            if version not in {0, 1}:
+                raise ValueError(f"unsupported ledger schema version {version}")
             connection.execute("PRAGMA journal_mode = WAL")
-            connection.executescript(SCHEMA)
+            connection.executescript(f"BEGIN IMMEDIATE; {SCHEMA} PRAGMA user_version = 1; COMMIT;")
 
     def _connect(self) -> sqlite3.Connection:
         return sqlite3.connect(self.path, timeout=15)
