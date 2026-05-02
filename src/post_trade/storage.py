@@ -78,6 +78,17 @@ class LedgerStore:
                     result["idempotent_retries"] += 1
         return result
 
+    def statistics(self) -> dict:
+        with closing(self._connect()) as connection, connection:
+            connection.execute("BEGIN")
+            tables = {}
+            for table in ("orders", "fills"):
+                count, oldest, newest = connection.execute(
+                    f"SELECT count(*), min(event_time), max(event_time) FROM {table}",
+                ).fetchone()
+                tables[table] = {"count": count, "first_event": oldest, "last_event": newest}
+            return {"schema_version": connection.execute("PRAGMA user_version").fetchone()[0], **tables}
+
     def snapshot(self, as_of: datetime | None = None) -> ExecutionBatch:
         cutoff = _event_time(as_of) if as_of else None
         condition = "WHERE event_time <= ?" if cutoff is not None else ""
