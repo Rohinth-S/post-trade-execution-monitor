@@ -8,8 +8,10 @@ from typing import Annotated
 from fastapi import FastAPI, HTTPException, Query, Request
 from pydantic import AwareDatetime
 
-from .events import AlertLimits, ExecutionBatch
+from . import __version__
+from .events import AlertLimits, ExecutionBatch, Key
 from .execution import build_execution_report
+from .scope import ReportScope
 from .storage import LedgerStore, RecordConflict
 
 
@@ -20,7 +22,7 @@ def create_app(database: str | Path | None = None) -> FastAPI:
         application.state.ledger = LedgerStore(path)
         yield
 
-    app = FastAPI(title="Execution Quality Monitor", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(title="Execution Quality Monitor", version=__version__, lifespan=lifespan)
 
     @app.get("/health")
     def health() -> dict:
@@ -40,10 +42,14 @@ def create_app(database: str | Path | None = None) -> FastAPI:
         slippage_bps: Annotated[float, Query(ge=0, le=100_000)] = 40,
         latency_ms: Annotated[float, Query(gt=0, le=1e9)] = 1_000,
         missing_after_ms: Annotated[float, Query(gt=0, le=1e9)] = 5_000,
+        venue: Annotated[Key | None, Query()] = None,
+        route: Annotated[Key | None, Query()] = None,
+        symbol: Annotated[Key | None, Query()] = None,
     ) -> dict:
         limits = AlertLimits(slippage_bps=slippage_bps, latency_ms=latency_ms, missing_after_ms=missing_after_ms)
         batch = request.app.state.ledger.snapshot(as_of)
-        return build_execution_report(batch, as_of=as_of, limits=limits)
+        scope = ReportScope(venue=venue, route=route, symbol=symbol)
+        return build_execution_report(batch, as_of=as_of, limits=limits, scope=scope)
 
     return app
 
