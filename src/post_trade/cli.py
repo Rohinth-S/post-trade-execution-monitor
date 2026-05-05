@@ -13,6 +13,7 @@ from .artifacts import require_distinct_paths
 from .events import AlertLimits, ExecutionBatch
 from .execution import build_execution_report
 from .fixtures import demo_batch
+from .scope import ReportScope
 from .storage import LedgerStore
 
 
@@ -24,6 +25,9 @@ def main() -> None:
     parser.add_argument("--db", type=Path, help="durable SQLite ledger")
     parser.add_argument("--as-of", type=datetime.fromisoformat, help="ISO-8601 replay cutoff with timezone")
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--venue")
+    parser.add_argument("--route")
+    parser.add_argument("--symbol")
     parser.add_argument("--slippage-bps", type=float, default=40)
     parser.add_argument("--latency-ms", type=float, default=1_000)
     parser.add_argument("--missing-after-ms", type=float, default=5_000)
@@ -47,7 +51,8 @@ def main() -> None:
         limits = AlertLimits(
             slippage_bps=args.slippage_bps, latency_ms=args.latency_ms, missing_after_ms=args.missing_after_ms,
         )
-        report = build_execution_report(batch, as_of=args.as_of, limits=limits)
+        scope = ReportScope(venue=args.venue, route=args.route, symbol=args.symbol)
+        report = build_execution_report(batch, as_of=args.as_of, limits=limits, scope=scope)
         report["producer"] = {"name": "post-trade-execution-monitor", "version": __version__, "format_version": 1}
         payload = json.dumps(report, indent=2, allow_nan=False) + "\n"
         if args.output:
