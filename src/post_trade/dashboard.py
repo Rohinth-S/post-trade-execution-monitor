@@ -11,6 +11,7 @@ import streamlit as st
 from post_trade.events import AlertLimits
 from post_trade.execution import build_execution_report
 from post_trade.fixtures import demo_batch
+from post_trade.scope import ReportScope
 
 st.set_page_config(page_title="Execution Quality", layout="wide")
 st.title("Execution Quality")
@@ -22,9 +23,18 @@ limits = AlertLimits(
     latency_ms=st.sidebar.number_input("Latency limit (ms)", min_value=1, max_value=1_000_000, value=1_000),
     missing_after_ms=st.sidebar.number_input("Missing fill after (ms)", min_value=1, max_value=1_000_000, value=5_000),
 )
+try:
+    scope = ReportScope(
+        venue=st.sidebar.text_input("Venue filter").strip() or None,
+        route=st.sidebar.text_input("Route filter").strip() or None,
+        symbol=st.sidebar.text_input("Symbol filter").strip() or None,
+    )
+except ValueError as exc:
+    st.error(f"Invalid report filter. {exc}")
+    st.stop()
 if source == "Ledger API":
     as_of = st.sidebar.text_input("Replay cutoff (ISO-8601 with timezone)")
-    params = limits.model_dump()
+    params = {**limits.model_dump(), **scope.model_dump(exclude_none=True)}
     if as_of:
         params["as_of"] = as_of
     try:
@@ -34,7 +44,7 @@ if source == "Ledger API":
         st.error(f"Ledger API request failed. {exc}")
         st.stop()
 else:
-    report = build_execution_report(demo_batch(), limits=limits)
+    report = build_execution_report(demo_batch(), limits=limits, scope=scope)
 
 st.caption(f"Replay as of {report['as_of']}")
 summary = report["summary"]
