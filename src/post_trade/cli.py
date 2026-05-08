@@ -12,6 +12,7 @@ from .artifacts import require_distinct_paths
 
 from .events import AlertLimits, ExecutionBatch
 from .execution import build_execution_report
+from .exports import orders_csv
 from .fixtures import demo_batch
 from .scope import ReportScope
 from .storage import LedgerStore
@@ -25,6 +26,7 @@ def main() -> None:
     parser.add_argument("--db", type=Path, help="durable SQLite ledger")
     parser.add_argument("--as-of", type=datetime.fromisoformat, help="ISO-8601 replay cutoff with timezone")
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--orders-csv", type=Path)
     parser.add_argument("--venue")
     parser.add_argument("--route")
     parser.add_argument("--symbol")
@@ -39,6 +41,7 @@ def main() -> None:
             input_file=args.input,
             ledger=args.db,
             report=args.output,
+            orders_export=args.orders_csv,
         )
         batch = ExecutionBatch.model_validate_json(args.input.read_bytes()) if args.input else None
         if args.seed_demo or (args.db is None and batch is None):
@@ -57,6 +60,8 @@ def main() -> None:
         payload = json.dumps(report, indent=2, allow_nan=False) + "\n"
         if args.output:
             write_text_atomic(args.output, payload)
+        if args.orders_csv:
+            write_text_atomic(args.orders_csv, orders_csv(report["orders"]))
     except (OSError, ValueError) as exc:
         parser.error(str(exc))
     print(payload, end="")
