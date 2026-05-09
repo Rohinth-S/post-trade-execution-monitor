@@ -27,6 +27,7 @@ def main() -> None:
     parser.add_argument("--as-of", type=datetime.fromisoformat, help="ISO-8601 replay cutoff with timezone")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--orders-csv", type=Path)
+    parser.add_argument("--write-events", type=Path)
     parser.add_argument("--venue")
     parser.add_argument("--route")
     parser.add_argument("--symbol")
@@ -42,6 +43,7 @@ def main() -> None:
             ledger=args.db,
             report=args.output,
             orders_export=args.orders_csv,
+            events_export=args.write_events,
         )
         batch = ExecutionBatch.model_validate_json(args.input.read_bytes()) if args.input else None
         if args.seed_demo or (args.db is None and batch is None):
@@ -62,6 +64,14 @@ def main() -> None:
             write_text_atomic(args.output, payload)
         if args.orders_csv:
             write_text_atomic(args.orders_csv, orders_csv(report["orders"]))
+        if args.write_events:
+            cutoff = datetime.fromisoformat(report["as_of"])
+            selected = scope.filter(batch)
+            visible = ExecutionBatch.model_construct(
+                orders=[record for record in selected.orders if record.sent_at <= cutoff],
+                fills=[record for record in selected.fills if record.filled_at <= cutoff],
+            )
+            write_text_atomic(args.write_events, visible.model_dump_json(indent=2) + "\n")
     except (OSError, ValueError) as exc:
         parser.error(str(exc))
     print(payload, end="")
