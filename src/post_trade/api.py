@@ -28,6 +28,10 @@ def create_app(database: str | Path | None = None) -> FastAPI:
     def health() -> dict:
         return {"status": "ok"}
 
+    @app.get("/v1/ledger")
+    def ledger(request: Request) -> dict:
+        return request.app.state.ledger.statistics()
+
     @app.post("/v1/events")
     def ingest(batch: ExecutionBatch, request: Request) -> dict:
         try:
