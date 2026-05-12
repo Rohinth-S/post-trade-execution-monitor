@@ -3,9 +3,11 @@
 from contextlib import asynccontextmanager
 import os
 from pathlib import Path
+import sqlite3
 from typing import Annotated
 
 from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 from pydantic import AwareDatetime
 
 from . import __version__
@@ -23,6 +25,13 @@ def create_app(database: str | Path | None = None) -> FastAPI:
         yield
 
     app = FastAPI(title="Execution Quality Monitor", version=__version__, lifespan=lifespan)
+
+    @app.exception_handler(sqlite3.OperationalError)
+    async def database_error(request: Request, exc: sqlite3.OperationalError):
+        code = getattr(exc, "sqlite_errorcode", 0) & 0xFF
+        if code in {sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED}:
+            return JSONResponse({"detail": "execution ledger temporarily busy"}, 503, headers={"Retry-After": "1"})
+        return JSONResponse({"detail": "execution ledger operation failed"}, 500)
 
     @app.get("/health")
     def health() -> dict:
