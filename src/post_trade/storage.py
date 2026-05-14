@@ -2,6 +2,7 @@
 
 from contextlib import closing
 from datetime import UTC, datetime
+import json
 from pathlib import Path
 import sqlite3
 
@@ -73,7 +74,7 @@ class LedgerStore:
                         f"SELECT payload FROM {table} WHERE venue = ? AND record_id = ?",
                         (venue, record_id),
                     ).fetchone()[0]
-                    if stored != payload:
+                    if stored != payload and json.loads(stored) != json.loads(payload):
                         raise RecordConflict(f"{table} identity {venue}/{record_id} has a different payload")
                     result["idempotent_retries"] += 1
         return result
