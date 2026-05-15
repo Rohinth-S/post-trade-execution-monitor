@@ -45,6 +45,12 @@ def main() -> None:
             orders_export=args.orders_csv,
             events_export=args.write_events,
         )
+        if args.as_of and (args.as_of.tzinfo is None or args.as_of.utcoffset() is None):
+            raise ValueError("replay cutoff must include a timezone")
+        limits = AlertLimits(
+            slippage_bps=args.slippage_bps, latency_ms=args.latency_ms, missing_after_ms=args.missing_after_ms,
+        )
+        scope = ReportScope(venue=args.venue, route=args.route, symbol=args.symbol)
         batch = ExecutionBatch.model_validate_json(args.input.read_bytes()) if args.input else None
         if args.seed_demo or (args.db is None and batch is None):
             batch = demo_batch()
@@ -53,10 +59,6 @@ def main() -> None:
             if batch:
                 store.ingest(batch)
             batch = store.snapshot(args.as_of)
-        limits = AlertLimits(
-            slippage_bps=args.slippage_bps, latency_ms=args.latency_ms, missing_after_ms=args.missing_after_ms,
-        )
-        scope = ReportScope(venue=args.venue, route=args.route, symbol=args.symbol)
         report = build_execution_report(batch, as_of=args.as_of, limits=limits, scope=scope)
         report["producer"] = {"name": "post-trade-execution-monitor", "version": __version__, "format_version": 1}
         payload = json.dumps(report, indent=2, allow_nan=False) + "\n"
