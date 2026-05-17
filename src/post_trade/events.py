@@ -15,6 +15,15 @@ class Event(BaseModel):
     venue: Key
     order_id: Key
 
+    @field_validator("sent_at", "filled_at", mode="before", check_fields=False)
+    @classmethod
+    def reject_ambiguous_epoch(cls, value):
+        if isinstance(value, str) and "T" not in value and " " not in value:
+            raise ValueError("event timestamps must use ISO-8601 date and time with a timezone")
+        if not isinstance(value, (str, datetime)):
+            raise ValueError("event timestamps must use ISO-8601 date and time with a timezone")
+        return value
+
     @field_validator("sent_at", "filled_at", mode="after", check_fields=False)
     @classmethod
     def canonical_time(cls, value: datetime) -> datetime:
