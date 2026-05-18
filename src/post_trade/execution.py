@@ -111,6 +111,7 @@ def build_execution_report(
             exceptions.append({
                 "venue": fill.venue, "order_id": fill.order_id, "fill_id": fill.fill_id,
                 "state": state, "cost_usd": fill.fee_usd + fill.gas_usd,
+                "filled_at": fill.filled_at.isoformat(), "status": fill.status,
             })
         else:
             receipts[key].append(fill)
@@ -152,4 +153,5 @@ def build_execution_report(
         "by_route": {k: _statistics(v) for k, v in sorted(groups["route"].items())},
         "by_symbol": dict(sorted(inventory.items())), "orders": rows, "alerts": alerts,
         "unlinked_cost_usd": sum(item["cost_usd"] for item in exceptions),
+        "unlinked_receipts": exceptions,
     }
