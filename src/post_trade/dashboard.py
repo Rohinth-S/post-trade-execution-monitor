@@ -10,6 +10,7 @@ import streamlit as st
 
 from post_trade.events import AlertLimits
 from post_trade.execution import build_execution_report
+from post_trade.exports import orders_csv
 from post_trade.fixtures import demo_batch
 from post_trade.scope import ReportScope
 
@@ -65,8 +66,11 @@ with cost_tab:
         st.dataframe(pd.DataFrame.from_dict(report["by_route"], orient="index"))
 with orders_tab:
     st.dataframe(report["orders"], hide_index=True)
+    st.download_button("Download orders CSV", orders_csv(report["orders"]), "orders.csv", "text/csv")
 with inventory_tab:
     st.dataframe(pd.DataFrame.from_dict(report["by_symbol"], orient="index"))
 with alerts_tab:
     st.dataframe(report["alerts"], hide_index=True)
+    st.subheader("Quarantined receipts")
+    st.dataframe(report["unlinked_receipts"], hide_index=True)
 st.download_button("Download report", json.dumps(report, indent=2), "execution-report.json", "application/json")
