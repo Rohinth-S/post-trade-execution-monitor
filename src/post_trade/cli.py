@@ -2,6 +2,7 @@
 
 import argparse
 from datetime import datetime
+import hashlib
 import json
 from pathlib import Path
 
@@ -51,7 +52,9 @@ def main() -> None:
             slippage_bps=args.slippage_bps, latency_ms=args.latency_ms, missing_after_ms=args.missing_after_ms,
         )
         scope = ReportScope(venue=args.venue, route=args.route, symbol=args.symbol)
-        batch = ExecutionBatch.model_validate_json(args.input.read_bytes()) if args.input else None
+        raw = args.input.read_bytes() if args.input else None
+        batch = ExecutionBatch.model_validate_json(raw) if raw is not None else None
+        input_sha = hashlib.sha256(raw).hexdigest() if raw is not None else None
         if args.seed_demo or (args.db is None and batch is None):
             batch = demo_batch()
         if args.db:
@@ -60,6 +63,9 @@ def main() -> None:
                 store.ingest(batch)
             batch = store.snapshot(args.as_of)
         report = build_execution_report(batch, as_of=args.as_of, limits=limits, scope=scope)
+        report["source"] = {"kind": "sqlite_ledger" if args.db else "capture" if args.input else "synthetic"}
+        if input_sha is not None:
+            report["source"]["input_sha256"] = input_sha
         report["producer"] = {"name": "post-trade-execution-monitor", "version": __version__, "format_version": 1}
         payload = json.dumps(report, indent=2, allow_nan=False) + "\n"
         if args.output:
