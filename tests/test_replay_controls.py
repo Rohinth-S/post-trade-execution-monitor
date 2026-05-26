@@ -42,3 +42,18 @@ def test_old_ledgers_migrate_and_compare_timezone_equivalent_instants(tmp_path):
         conn.execute("PRAGMA user_version = 9")
     with pytest.raises(ValueError, match="unsupported ledger schema"):
         LedgerStore(path)
+
+def test_ledger_api_exposes_report_filters_and_rejects_ambiguous_events(tmp_path):
+    from fastapi.testclient import TestClient
+    from post_trade.api import create_app
+
+    with TestClient(create_app(tmp_path / "ledger.sqlite3")) as client:
+        body = demo_batch().model_dump(mode="json")
+        assert client.post("/v1/events", json=body).status_code == 200
+        stats = client.get("/v1/ledger").json()
+        assert stats["orders"]["count"] == 6 and stats["fills"]["count"] == 6
+        request = client.get("/v1/report", params={"venue": "cex", "symbol": "ETH"})
+        assert request.status_code == 200
+        assert all(row["venue"] == "cex" for row in request.json()["orders"])
+        body["orders"][0]["sent_at"] = 0
+        assert client.post("/v1/events", json=body).status_code == 422
