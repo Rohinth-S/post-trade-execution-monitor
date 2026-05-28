@@ -57,3 +57,15 @@ def test_ledger_api_exposes_report_filters_and_rejects_ambiguous_events(tmp_path
         assert all(row["venue"] == "cex" for row in request.json()["orders"])
         body["orders"][0]["sent_at"] = 0
         assert client.post("/v1/events", json=body).status_code == 422
+
+def test_invalid_cutoff_does_not_create_ledger(tmp_path):
+    import subprocess
+    import sys
+
+    path = tmp_path / "no-ledger.sqlite3"
+    process = subprocess.run(
+        [sys.executable, "-m", "post_trade.cli", "--db", str(path), "--seed-demo",
+         "--as-of", "2026-04-01T12:00:00"], capture_output=True, text=True, timeout=45,
+    )
+    assert process.returncode == 2
+    assert "timezone" in process.stderr and not path.exists()
