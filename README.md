@@ -85,3 +85,15 @@ use retrospectively assigned milestones from 2026-04-01 through 2026-05-31,
 the project period listed in the résumé. Each commit records its assigned date
 in the Project-Milestone trailer and its original committer timestamp in
 the Original-Commit-Date trailer. Use git log --format=fuller to inspect the dates.
+
+## Compare a scoped execution report
+
+The CLI and API accept venue, route, and symbol filters. The default report cutoff
+still comes from the full supplied event batch, so missing-order ages remain
+comparable between scopes. Route and symbol filters require an attributable order
+for a receipt. The report lists unlinked costs and quarantined receipts separately.
+
+The ledger distinguishes first response, first successful fill, and completion
+latency. USD notional is reported separately from base-asset inventory. Use
+`--orders-csv` to export rows and `--write-events` to export the visible normalized
+events for replay. GET `/v1/ledger` reports durable record counts and time coverage.
