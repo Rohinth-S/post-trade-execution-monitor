@@ -1,0 +1,10 @@
+{
+  "orders": [
+    {"venue":"lab-cex","order_id":"1","symbol":"ETH","route":"eth-usdc","side":"buy",
+     "quoted_price_usd":2000,"quantity":1,"sent_at":"2026-04-01T12:00:00Z"}
+  ],
+  "fills": [
+    {"venue":"lab-cex","order_id":"1","fill_id":"fill-1","quantity":1,"executed_price_usd":2001,
+     "fee_usd":0.1,"gas_usd":0,"filled_at":"2026-04-01T12:00:00.180Z","status":"filled"}
+  ]
+}

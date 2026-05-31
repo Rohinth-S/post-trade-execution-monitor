@@ -28,6 +28,7 @@ jobs:
           python -m pip install "${wheels[0]}[dashboard,test]"
       - run: python -m pytest -q
       - run: post_trade_execution_monitor --db reports/ci.sqlite3 --seed-demo --output reports/ci.json
+      - run: post_trade_execution_monitor --input examples/one-order.json --venue lab-cex --orders-csv reports/one-order.csv --output reports/one-order.json
       - uses: actions/upload-artifact@v4
         with:
           name: demo-${{ matrix.os }}-${{ matrix.python }}
