@@ -127,7 +127,9 @@ def write_report(rows: list[dict], destination: str | Path, format: str | None =
 def reconcile(fills):
     rows=[]
     for f in fills:
-      rows.append({"order_id":f.order_id,"venue":f.venue,"slippage_bps":f.slippage_bps(),"latency_ms":f.latency_ms(),"gas_usd":f.gas_usd,"status":f.status})
+      rows.append({"order_id":f.order_id,"venue":f.venue,"quoted":f.quoted,"executed":f.executed,
+                   "quantity":f.quantity,"slippage_bps":f.slippage_bps(),"latency_ms":f.latency_ms(),
+                   "gas_usd":f.gas_usd,"pnl_usd":(f.quoted-f.executed)*f.quantity-f.gas_usd,"status":f.status})
     return rows
 
 def anomalies(rows, slip_limit=40, latency_limit=1000):
