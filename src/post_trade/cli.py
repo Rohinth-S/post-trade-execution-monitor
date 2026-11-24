@@ -1,5 +1,50 @@
-from datetime import datetime,timedelta
-from .monitor import Fill,reconcile,anomalies,pnl_attribution
-def main():
- t=datetime(2026,1,1); fs=[Fill("o1","dex",100,100.2,1,3,t,t+timedelta(milliseconds=120)),Fill("o2","dex",100,102,1,3,t,t+timedelta(seconds=2))]; rows=reconcile(fs); print(pnl_attribution(rows)); print({"alerts":anomalies(rows)})
-if __name__=="__main__":main()
+"""Import JSON order events and replay any ledger cutoff."""
+
+import argparse
+from datetime import datetime
+import json
+from pathlib import Path
+
+from .events import AlertLimits, ExecutionBatch
+from .execution import build_execution_report
+from .fixtures import demo_batch
+from .storage import LedgerStore
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Reconcile order and fill events and export an execution report")
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument("--input", type=Path, help="normalized order and fill JSON")
+    source.add_argument("--seed-demo", action="store_true", help="insert the built-in dataset into the selected ledger")
+    parser.add_argument("--db", type=Path, help="durable SQLite ledger")
+    parser.add_argument("--as-of", type=datetime.fromisoformat, help="ISO-8601 replay cutoff with timezone")
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--slippage-bps", type=float, default=40)
+    parser.add_argument("--latency-ms", type=float, default=1_000)
+    parser.add_argument("--missing-after-ms", type=float, default=5_000)
+    args = parser.parse_args()
+
+    try:
+        batch = ExecutionBatch.model_validate_json(args.input.read_bytes()) if args.input else None
+        if args.seed_demo or (args.db is None and batch is None):
+            batch = demo_batch()
+        if args.db:
+            store = LedgerStore(args.db)
+            if batch:
+                store.ingest(batch)
+            batch = store.snapshot(args.as_of)
+        limits = AlertLimits(
+            slippage_bps=args.slippage_bps, latency_ms=args.latency_ms, missing_after_ms=args.missing_after_ms,
+        )
+        report = build_execution_report(batch, as_of=args.as_of, limits=limits)
+        payload = json.dumps(report, indent=2, allow_nan=False) + "\n"
+        if args.output:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(payload, encoding="utf-8")
+    except (OSError, ValueError) as exc:
+        parser.error(str(exc))
+    print(payload, end="")
+
+
+if __name__ == "__main__":
+    main()
