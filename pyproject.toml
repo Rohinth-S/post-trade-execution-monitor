@@ -1,12 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "post-trade-execution-monitor"
-version = "0.1.0"
-description = "Reproducible quantitative research system"
+version = "0.2.0"
+description = "Durable order reconciliation and execution-quality analytics"
 requires-python = ">=3.11"
-dependencies = [
-    "numpy>=1.26",
-    "pandas>=2.1",
-]
+dependencies = ["fastapi>=0.115", "numpy>=1.26", "pydantic>=2.9", "uvicorn>=0.30"]
+
+[project.optional-dependencies]
+dashboard = ["pandas>=2.1", "streamlit>=1.40"]
+test = ["httpx>=0.27", "pytest>=8"]
 
 [project.scripts]
 post_trade_execution_monitor = "post_trade.cli:main"
