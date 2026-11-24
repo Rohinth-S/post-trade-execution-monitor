@@ -1,0 +1,26 @@
+services:
+  api:
+    build: .
+    environment:
+      EXECUTION_DB: /data/execution.sqlite3
+    volumes:
+      - executions:/data
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/health', timeout=2).close()"]
+      interval: 3s
+      timeout: 4s
+      retries: 12
+  dashboard:
+    build: .
+    environment:
+      EXECUTION_API: http://api:8000
+    command: ["streamlit", "run", "src/post_trade/dashboard.py", "--server.address=0.0.0.0", "--server.headless=true"]
+    ports:
+      - "127.0.0.1:8501:8501"
+    depends_on:
+      api:
+        condition: service_healthy
+volumes:
+  executions:
